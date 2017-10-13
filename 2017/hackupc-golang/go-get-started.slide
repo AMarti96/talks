@@ -1,0 +1,165 @@
+Get started with Go
+
+Bernat Moix
+HackUPC
+
+* Go
+
+You may have heard of Go.
+
+It's my favorite language. I think you'll like it, too.
+
+* What is Go?
+
+Go is a new, general-purpose programming language.
+
+- Compiled
+- Statically typed
+- Concurrent
+- Simple
+- Productive
+
+* History
+
+- Project starts at Google in 2007 (10 years!)
+- Open source release in 2009 (BSD licensed)
+- Almost 1000 contributors
+- Version 1.9 released in August 2017
+
+* Go is about composition
+
+Go is Object Oriented, but not in the usual way.
+
+- no classes (methods may be declared on any type)
+- no subtype inheritance
+- interfaces are satisfied implicitly (structural typing)
+
+The result: simple pieces connected by small interfaces.
+
+* Go is about concurrency
+
+Go provides built-in concurrency primitives.
+
+- lightweight threads (goroutines)
+- typed thread-safe communication and synchronization (channels)
+
+The result: comprehensible concurrent code.
+
+* Go is about gophers
+
+.image gopher.jpg
+
+* Core values
+
+Go is about composition, concurrency, and gophers.
+
+Keep that in mind.
+
+* Hello, go
+
+.play support/hello.go
+
+* Hello, net
+
+.play support/hello-net.go
+
+* Interfaces
+
+Hey! We just used `Fprintln` to write to a net connection.
+
+That's because a `Fprintln` writes to an `io.Writer`, and `net.Conn` is an `io.Writer`.
+
+.code support/hello-net.go /Fprintln/
+.code support/defs.go /Fprintln/
+.code support/defs.go /type.Writer/,/^}/
+.code support/defs.go /type.Conn/,/^}/
+
+* An echo server
+
+.play support/echo-1.go
+
+* A closer look at io.Copy
+
+.code support/echo-1.go /Copy/
+.code support/defs.go /Copy/,/func/
+.code support/defs.go /type.Conn/,/^}/
+.code support/defs.go /type.Writer/,/^}/
+.code support/defs.go /type.Reader/,/^}/
+
+* Goroutines
+
+Goroutines are lightweight threads that are managed by the Go runtime. To run a function in a new goroutine, just put `"go"` before the function call.
+
+.play support/goroutines.go
+
+* A concurrent echo server
+
+.play support/echo-2.go
+
+* "Chat roulette"
+
+In this talk we'll look at a simple program, based on the popular "chat roulette" site.
+
+In short:
+
+- a user connects,
+- another user connects,
+- everything one user types is sent to the other.
+
+* Design
+
+The chat program is similar to the echo program. With echo, we copy a connection's incoming data back to the same connection.
+
+For chat, we must copy the incoming data from one user's connection to another's.
+
+Copying the data is easy. As in real life, the hard part is matching one partner with another.
+
+* Channels
+
+Goroutines communicate via channels. A channel is a typed conduit that may be synchronous (unbuffered) or asynchronous (buffered).
+
+.play support/chan.go
+
+* Select
+
+A select statement is like a switch, but it selects over channel operations (and chooses exactly one of them).
+
+.play support/select.go
+
+* Modifying echo to create chat
+
+In the accept loop, we replace the call to `io.Copy`:
+
+.code support/echo-1.go /for {/,/\n	}/
+
+with a call to a new function, `match`:
+
+.code support/chat-1.go /for {/,/\n	}/
+
+* The matcher
+
+The `match` function simultaneously tries to send and receive a connection on a channel.
+
+- If the send succeeds, the connection has been handed off to another goroutine, so the function exits and the goroutine shuts down.
+- If the receive succeeds, a connection has been received from another goroutine. The current goroutine then has two connections, so it starts a chat session between them.
+
+.code support/chat-1.go /var.partner/,/^}/
+
+* The conversation
+
+The chat function sends a greeting to each connection and then copies data from one to the other, and vice versa.
+
+Notice that it launches another goroutine so that the copy operations may happen concurrently.
+
+.code support/chat-1.go /func.chat/,/^}/
+
+* Demo
+
+* Error handling
+
+It's important to clean up when the conversation is over. To do this we send the error value from each `io.Copy` call to a channel, log any non-nil errors, and close both connections.
+
+.code support/chat-2.go /func.chat/,/^}/
+.code support/chat-2.go /func.cp/,/^}/
+
+* Demo
